@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Database, KeyRound, RotateCcw, ShieldCheck } from "lucide-react";
+import { AlertTriangle, Database, KeyRound, PlugZap, RotateCcw, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { fmtDateTime } from "@/components/shared/format";
-import { resetDemoAction, setGlobalDryRunAction, setLlmProviderAction, setPublishingEnabledAction } from "@/lib/actions/settings";
+import { resetDemoAction, setGlobalDryRunAction, setLlmProviderAction, setPublishingEnabledAction, testLlmProviderAction } from "@/lib/actions/settings";
 import { AGENT_CATALOG } from "@/lib/agents/agents";
 import { LLM_PROVIDER_OPTIONS } from "@/lib/llm";
 import type { LlmProviderName } from "@/lib/settings";
@@ -36,6 +36,18 @@ export function SettingsPanel({ publishingEnabled, globalDryRun, provider, model
   const [modelName, setModelName] = useState(model);
   const [resetOpen, setResetOpen] = useState(false);
   const [enableOpen, setEnableOpen] = useState(false);
+  const [testResult, setTestResult] = useState<
+    { ok: true; provider: string; model: string; latencyMs: number; greeting: string } | { ok: false; error: string } | null
+  >(null);
+
+  function testProvider() {
+    setTestResult(null);
+    startTransition(async () => {
+      const result = await testLlmProviderAction(selectedProvider, modelName);
+      if (result.ok && result.data) setTestResult({ ok: true, ...result.data });
+      else setTestResult({ ok: false, error: result.ok ? "Sin respuesta." : result.error });
+    });
+  }
 
   function run(promise: Promise<{ ok: boolean; message?: string; error?: string }>, after?: () => void) {
     startTransition(async () => {
@@ -112,7 +124,19 @@ export function SettingsPanel({ publishingEnabled, globalDryRun, provider, model
               <Badge variant="outline">Ollama: {env.ollamaUrl}</Badge>
             </div>
             {!providerReady && <p className="text-xs text-red-700">Falta la clave en el entorno para este proveedor. Añádela a .env.local y reinicia.</p>}
-            <Button size="sm" onClick={() => run(setLlmProviderAction(selectedProvider, modelName))} disabled={pending || !providerReady}>Guardar proveedor</Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button size="sm" variant="outline" onClick={testProvider} disabled={pending || !providerReady}>
+                <PlugZap /> Probar conexión
+              </Button>
+              <Button size="sm" onClick={() => run(setLlmProviderAction(selectedProvider, modelName))} disabled={pending || !providerReady}>Guardar proveedor</Button>
+            </div>
+            {testResult && (
+              <div className={`rounded-md p-3 text-xs ${testResult.ok ? "bg-emerald-50 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200" : "bg-red-50 text-red-800 dark:bg-red-950/40 dark:text-red-200"}`}>
+                {testResult.ok
+                  ? `Conexión correcta con ${testResult.provider} (${testResult.model}) en ${testResult.latencyMs} ms: «${testResult.greeting}»`
+                  : `Error: ${testResult.error}`}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

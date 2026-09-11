@@ -93,11 +93,21 @@ export type StrategyOutput = z.infer<typeof StrategyOutputSchema>;
 // ---------------------------------------------------------------------------
 // 3. MasterContentAgent
 // ---------------------------------------------------------------------------
+/** Instrucciones humanas para una regeneración (comentarios del revisor). */
+export const FeedbackSchema = z
+  .object({
+    reviewerComments: z.string(),
+    previousAttempt: z.string().nullable(),
+  })
+  .nullable()
+  .optional();
+
 export const MasterInputSchema = z.object({
   brand: BrandContextSchema,
   topic: z.string(),
   research: ResearchOutputSchema,
   strategy: StrategyOutputSchema,
+  feedback: FeedbackSchema,
 });
 export type MasterInput = z.infer<typeof MasterInputSchema>;
 
@@ -126,6 +136,7 @@ export const AdapterInputSchema = z.object({
     hashtagRange: z.tuple([z.number().int(), z.number().int()]),
     tone: z.string(),
   }),
+  feedback: FeedbackSchema,
 });
 export type AdapterInput = z.infer<typeof AdapterInputSchema>;
 

@@ -99,7 +99,24 @@ data/               base de datos, multimedia y clave (ignorado por git)
 tests/              Vitest
 ```
 
+## Fase 2: contenido con un proveedor real
+
+Objetivo de la fase: producir buen contenido con Anthropic u OpenAI. Las redes sociales siguen simuladas.
+
+**Activar un proveedor**
+
+1. Copia `.env.example` a `.env.local` y pega la clave (`ANTHROPIC_API_KEY` u `OPENAI_API_KEY`). Opcionalmente fija el modelo (`ANTHROPIC_MODEL`, `OPENAI_MODEL`).
+2. Reinicia `npm run dev` (las variables de entorno se leen al arrancar).
+3. En **Configuración → Proveedor de IA** elige el proveedor, pulsa **Probar conexión** y después **Guardar proveedor**.
+4. Genera contenido desde **Ideas** o **Estudio**. En la pestaña **Agentes** de cada pieza puedes ver la entrada y la salida JSON de cada agente para depurar la calidad.
+
+**Qué cambia respecto a la fase 1**
+
+- Prompts con brief de marca legible, reglas de estilo (sin frases genéricas, sin promesas, una idea por pieza) y un playbook por red (`src/lib/agents/prompts.ts`).
+- Regenerar una adaptación envía al agente los comentarios del revisor y el intento anterior, y le exige explicar qué cambió.
+- El `ReviewAgent` combina la rúbrica del modelo con comprobaciones deterministas: palabras y promesas prohibidas, frases genéricas, longitud por red (y por post en X), rango de hashtags, longitud del hook y exceso de emojis.
+- El adaptador de OpenAI usa `max_completion_tokens` y omite `temperature` en modelos de razonamiento (`gpt-5*`, `o*`).
+
 ## Próximas fases
 
-- Fase 2: proveedores reales probados end to end, cola de programación con ejecución automática.
 - Fase 3: conectores reales por red y métricas reales. No se conectará ninguna API social hasta que el flujo de aprobación esté validado.

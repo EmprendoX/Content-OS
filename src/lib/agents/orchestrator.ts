@@ -385,10 +385,21 @@ export async function regenerateVariant(variantId: string, deps: OrchestratorDep
     );
   }
   if (variant.status !== "ADAPTING") transitionVariant(db, variantId, "ADAPTING", "agent", actorLabel);
+  // Los comentarios del revisor y el intento anterior viajan al adaptador como feedback.
+  const feedback = variant.reviewerComments.trim()
+    ? { reviewerComments: variant.reviewerComments, previousAttempt: `${variant.hook}\n\n${variant.copy}` }
+    : null;
   const adaptation = await step(
     deps,
     ADAPTERS[variant.network],
-    { brand, network: variant.network, plan, master, constraints: { maxChars: spec.maxChars, formats: spec.formats, hashtagRange: spec.hashtagRange, tone: spec.tone } },
+    {
+      brand,
+      network: variant.network,
+      plan,
+      master,
+      constraints: { maxChars: spec.maxChars, formats: spec.formats, hashtagRange: spec.hashtagRange, tone: spec.tone },
+      feedback,
+    },
     { pieceId: piece.id, variantId },
   );
   const visualBrief = await step(deps, VisualBriefAgent, { brand, adaptation, aspectRatios: spec.aspectRatios }, { pieceId: piece.id, variantId });

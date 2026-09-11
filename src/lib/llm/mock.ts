@@ -39,6 +39,10 @@ function truncate(text: string, max: number): string {
 }
 
 const handlers: Record<string, (input: unknown) => unknown> = {
+  ping() {
+    return { ok: true, greeting: "MockProvider operativo." };
+  },
+
   research(raw): ResearchOutput {
     const input = raw as ResearchInput;
     const audience = pick(input.brand.audiences, "tu audiencia");

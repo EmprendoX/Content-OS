@@ -1,8 +1,10 @@
 "use server";
 
 import fs from "node:fs";
+import { z } from "zod";
 import { getDb, resolveDatabasePath } from "@/lib/db/client";
 import { seed } from "@/lib/db/seed";
+import { createLlmProvider } from "@/lib/llm";
 import { audit } from "@/lib/security/audit";
 import { SETTING_KEYS, setSetting, type LlmProviderName } from "@/lib/settings";
 import { HUMAN_ACTOR, safeAction } from "./shared";
@@ -30,6 +32,24 @@ export async function setLlmProviderAction(provider: LlmProviderName, model: str
     setSetting(db, SETTING_KEYS.llmModel, model.trim());
     audit(db, { actor: HUMAN_ACTOR, action: "settings.llm", entityType: "settings", entityId: SETTING_KEYS.llmProvider, details: { provider, model } });
   }, "Proveedor de IA actualizado.");
+}
+
+const PingSchema = z.object({ ok: z.boolean(), greeting: z.string() });
+
+/** Prueba de conexión con el proveedor indicado: una llamada mínima con salida validada. */
+export async function testLlmProviderAction(provider: LlmProviderName, model: string) {
+  return safeAction(async () => {
+    const started = Date.now();
+    const llm = createLlmProvider(provider, model.trim() || undefined);
+    const result = await llm.generateObject({
+      task: "ping",
+      system: "Eres un asistente que responde exclusivamente con JSON válido.",
+      prompt: "Responde con un saludo de una frase en español y ok=true.",
+      schema: PingSchema,
+      input: { check: "conexión" },
+    });
+    return { provider: llm.name, model: llm.model, latencyMs: Date.now() - started, greeting: result.greeting };
+  });
 }
 
 /** Regenera los datos de demostración. Borra la base de datos local (no los archivos multimedia). */
