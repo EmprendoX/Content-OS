@@ -1,0 +1,1 @@
+ALTER TABLE `brands` ADD `locale` text DEFAULT 'es-MX' NOT NULL;

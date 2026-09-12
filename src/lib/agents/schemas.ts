@@ -17,6 +17,8 @@ export const BrandContextSchema = z.object({
   id: z.string(),
   name: z.string(),
   description: z.string(),
+  /** Región del español (es-MX, es-ES, es-AR, es-CO, es-419). */
+  locale: z.string().default("es-MX"),
   products: z.array(z.string()),
   audiences: z.array(z.string()),
   voiceTone: z.string(),

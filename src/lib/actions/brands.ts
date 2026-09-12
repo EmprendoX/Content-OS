@@ -5,6 +5,7 @@ import { getDb } from "@/lib/db/client";
 import { brandNetworks, brands } from "@/lib/db/schema";
 import { newId, nowIso, slugify } from "@/lib/ids";
 import { isNetwork, NETWORKS, type Network } from "@/lib/networks";
+import { LOCALES } from "@/lib/locales";
 import { audit } from "@/lib/security/audit";
 import { HUMAN_ACTOR, parseLines, safeAction, str } from "./shared";
 
@@ -19,6 +20,7 @@ export async function saveBrandAction(form: FormData) {
       name,
       description: str(form, "description"),
       color: str(form, "color") || "#2563eb",
+      locale: (LOCALES as readonly string[]).includes(str(form, "locale")) ? str(form, "locale") : "es-MX",
       products: parseLines(form.get("products")),
       audiences: parseLines(form.get("audiences")),
       voiceTone: str(form, "voiceTone"),
@@ -28,7 +30,11 @@ export async function saveBrandAction(form: FormData) {
       preferredWords: parseLines(form.get("preferredWords")),
       forbiddenWords: parseLines(form.get("forbiddenWords")),
       forbiddenPromises: parseLines(form.get("forbiddenPromises")),
-      approvedExamples: parseLines(form.get("approvedExamples")),
+      // Los ejemplos pueden tener varios párrafos: se separan con una línea "---".
+      approvedExamples: String(form.get("approvedExamples") ?? "")
+        .split(/\n\s*---\s*\n/)
+        .map((e) => e.trim())
+        .filter(Boolean),
       updatedAt: nowIso(),
     };
 

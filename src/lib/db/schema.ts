@@ -16,6 +16,7 @@ export const brands = sqliteTable("brands", {
   slug: text("slug").notNull().unique(),
   description: text("description").notNull().default(""),
   color: text("color").notNull().default("#2563eb"),
+  locale: text("locale").notNull().default("es-MX"),
   products: jsonText<string[]>("products").notNull().default([]),
   audiences: jsonText<string[]>("audiences").notNull().default([]),
   voiceTone: text("voice_tone").notNull().default(""),

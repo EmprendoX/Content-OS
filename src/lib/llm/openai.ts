@@ -36,7 +36,7 @@ export class OpenAIProvider implements LLMProvider {
       };
       if (this.isReasoningModel) {
         // Para redacción, un esfuerzo de razonamiento bajo es suficiente y mucho más rápido.
-        body.reasoning_effort = process.env.OPENAI_REASONING_EFFORT ?? "low";
+        body.reasoning_effort = request.effort ?? process.env.OPENAI_REASONING_EFFORT ?? "low";
       } else {
         body.temperature = request.temperature ?? 0.5;
       }

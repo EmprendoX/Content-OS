@@ -36,13 +36,13 @@ describe("calidad de contenido (fase 2)", () => {
     const piece = makePiece(db, brandId, ["linkedin"]);
     await runPipeline(piece.id, { db, provider: spy, actorLabel: "test" });
     const adapt = spy.requests.find((r) => r.task === "adapt")!;
-    expect(adapt.system).toContain("Playbook LinkedIn");
-    expect(adapt.system).toContain("Reglas de escritura");
+    expect(adapt.system).toContain("# LinkedIn");
+    expect(adapt.system).toContain("Cómo debe sonar el texto");
     expect(adapt.prompt).toContain("PALABRAS PROHIBIDAS");
     expect(adapt.prompt).toContain("milagro");
     expect(adapt.prompt).toContain("Pieza maestra");
     const master = spy.requests.find((r) => r.task === "master")!;
-    expect(master.prompt).toContain("Estrategia aprobada");
+    expect(master.prompt).toContain("Lo que hay que contar");
   });
 
   it("al regenerar, los comentarios del revisor y el intento anterior llegan al adaptador", async () => {
@@ -158,6 +158,56 @@ describe("calidad de contenido (fase 2)", () => {
     const review = spy.requests.find((r) => r.task === "review")!;
     expect((review.input as { appliedFeedback: string }).appliedFeedback).toBe("Cambia el hook por uno con dato.");
     expect(review.prompt).toContain("YA aplicó");
+  });
+
+  it("el ReviewAgent detecta el estilo telegráfico que suena a IA", async () => {
+    const brand = {
+      id: brandId, name: "Marca Test", description: "", products: [], audiences: [], voiceTone: "", offers: [], ctas: [],
+      proofPoints: [], preferredWords: [], forbiddenWords: [], forbiddenPromises: [], approvedExamples: [],
+    };
+    const review = await runAgent(ReviewAgent, new MockProvider(), {
+      brand,
+      maxChars: 3000,
+      adaptation: {
+        network: "linkedin",
+        format: "publicación",
+        hook: "Tu página pierde clientes en cinco segundos.",
+        copy: "Tu página pierde clientes en cinco segundos.\n\nError 1: hablas de ti.\nSolución: un botón principal.\nResultado: más consultas.\n\n→ Revisa la carga · Reduce el menú",
+        cta: "Escríbenos",
+        hashtags: ["#a", "#b"],
+        notes: "",
+      },
+    });
+    const robotic = review.issues.find((i) => i.type === "tono" && i.message.includes("telegráfico"));
+    expect(robotic).toBeDefined();
+    expect(robotic!.severity).toBe("alta");
+    expect(review.passed).toBe(false);
+
+    // El mismo contenido hilado en frases completas pasa.
+    const fluent = await runAgent(ReviewAgent, new MockProvider(), {
+      brand,
+      maxChars: 3000,
+      adaptation: {
+        network: "linkedin",
+        format: "publicación",
+        hook: "Tu página pierde clientes en cinco segundos.",
+        copy: "Tu página pierde clientes en cinco segundos.\n\nLo vemos cada semana: alguien entra desde el celular, no entiende qué haces y se va. No es cuestión de diseño, es que la página habla de ti y no de lo que resuelves.\n\nSi quieres, la revisamos juntos.",
+        cta: "Si quieres, la revisamos juntos.",
+        hashtags: ["#a", "#b"],
+        notes: "",
+      },
+    });
+    expect(fluent.passed).toBe(true);
+  });
+
+  it("el brief de marca incluye la guía del dialecto configurado", async () => {
+    const spy = new SpyProvider();
+    const piece = makePiece(db, brandId, ["linkedin"]);
+    await runPipeline(piece.id, { db, provider: spy, actorLabel: "test" });
+    const master = spy.requests.find((r) => r.task === "master")!;
+    expect(master.prompt).toContain("español de México");
+    expect(master.prompt).toContain("Textos reales de la marca");
+    expect(master.system).toContain("suene a IA");
   });
 
   it("generateWithRetry reintenta una vez con los errores de validación y luego falla", async () => {

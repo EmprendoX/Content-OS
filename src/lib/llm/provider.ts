@@ -13,6 +13,8 @@ export interface GenerateObjectRequest<T> {
   /** Objeto de entrada tipado; se serializa dentro del prompt. */
   input: unknown;
   temperature?: number;
+  /** Esfuerzo de razonamiento sugerido (los proveedores que lo soportan lo aplican). */
+  effort?: "minimal" | "low" | "medium" | "high";
 }
 
 export interface LLMProvider {

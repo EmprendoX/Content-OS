@@ -140,29 +140,32 @@ const handlers: Record<string, (input: unknown) => unknown> = {
         .replace(/[^a-zA-Z0-9]/g, "")}`;
     const baseTags = [tag(brand.name), tag(master.title.split(" ").slice(0, 2).join(""))];
 
+    // Los puntos de la pieza maestra se hilan en frases completas: el mock
+    // imita texto fluido para que el revisor no lo marque como telegráfico.
+    const points = master.body
+      .split("\n")
+      .filter((l) => /^\d\./.test(l))
+      .map((l) => l.replace(/^\d\.\s*/, "").trim());
+    const proof = master.proofPointsUsed[0] ? ` Lo hemos visto con ${master.proofPointsUsed[0]}.` : "";
+    const woven = points.length
+      ? `Lo primero es que ${points[0].charAt(0).toLowerCase()}${points[0].slice(1)} Después viene algo que casi nadie hace: ${points[1] ?? "mostrar el proceso completo"} Y al final, lo que de verdad cambia el resultado es que ${points[2] ?? "cierres con un paso concreto"}`
+      : master.keyMessage;
+
     switch (network) {
       case "instagram": {
-        const copy = [
-          master.hook,
-          "",
-          "Desliza 👉",
-          "",
-          ...master.body.split("\n").filter((l) => /^\d\./.test(l)).map((l) => l.replace(/^\d\.\s*/, "✅ ")),
-          "",
-          "Guarda este post para cuando lo necesites.",
-        ].join("\n");
+        const copy = `${master.hook}\n\n${woven}${proof}\n\nSi quieres que lo veamos con tu caso, escríbenos. ${master.cta}`;
         return {
           network,
           format: plan.format,
           hook: master.hook,
           copy: truncate(copy, constraints.maxChars),
-          cta: `${master.cta} Link en bio.`,
+          cta: master.cta,
           hashtags: [...baseTags, "#marketing", "#estrategia"],
-          notes: "Carrusel de 5 slides: portada con el hook, 3 puntos, cierre con CTA.",
+          notes: "Carrusel de 5 slides: portada con la primera línea, una idea por slide, cierre con la invitación.",
         };
       }
       case "facebook": {
-        const copy = `${master.hook}\n\n${master.body}\n\n¿Te ha pasado? Cuéntanos en comentarios.`;
+        const copy = `${master.hook}\n\n${master.body}\n\nCuéntanos en los comentarios cuál de estas tres te está pasando ahora mismo. ${master.cta}`;
         return {
           network,
           format: plan.format,
@@ -170,23 +173,11 @@ const handlers: Record<string, (input: unknown) => unknown> = {
           copy: truncate(copy, constraints.maxChars),
           cta: master.cta,
           hashtags: baseTags.slice(0, 1),
-          notes: "Tono de comunidad; incluir imagen con el hook.",
+          notes: "Tono de comunidad; incluir imagen con la primera línea.",
         };
       }
       case "linkedin": {
-        const copy = [
-          master.hook,
-          "",
-          `Contexto: ${master.keyMessage}`,
-          "",
-          ...master.body.split("\n").filter((l) => /^\d\./.test(l)).map((l) => `→ ${l.replace(/^\d\.\s*/, "")}`),
-          "",
-          master.proofPointsUsed.length > 0 ? `Dato: ${master.proofPointsUsed[0]}.` : "",
-          "",
-          "¿Qué añadirías desde tu experiencia?",
-        ]
-          .filter((l, i, arr) => !(l === "" && arr[i - 1] === ""))
-          .join("\n");
+        const copy = `${master.hook}\n\n${master.keyMessage}\n\n${woven}${proof}\n\nLo que aprendimos es sencillo de decir y difícil de hacer: claridad antes que adornos. ¿En qué parte se te atora a ti? ${master.cta}`;
         return {
           network,
           format: plan.format,
@@ -198,10 +189,9 @@ const handlers: Record<string, (input: unknown) => unknown> = {
         };
       }
       case "x": {
-        const points = master.body.split("\n").filter((l) => /^\d\./.test(l));
         const thread = [
           `1/ ${truncate(master.hook, 240)}`,
-          ...points.map((p, i) => `${i + 2}/ ${truncate(p.replace(/^\d\.\s*/, ""), 260)}`),
+          ...points.map((p, i) => `${i + 2}/ ${truncate(p, 260)}`),
           `${points.length + 2}/ ${truncate(master.cta, 260)}`,
         ].join("\n\n");
         return {
@@ -216,14 +206,17 @@ const handlers: Record<string, (input: unknown) => unknown> = {
       }
       case "youtube": {
         const copy = [
-          `GANCHO (0-3s): ${master.hook}`,
+          "[GANCHO]",
+          master.hook,
           "",
-          `DESARROLLO: ${master.keyMessage}`,
-          ...master.body.split("\n").filter((l) => /^\d\./.test(l)).map((l) => `• ${l.replace(/^\d\.\s*/, "")}`),
+          "[DESARROLLO]",
+          `${woven}${proof}`,
           "",
-          `CIERRE: ${master.cta}`,
+          "[CIERRE]",
+          master.cta,
           "",
-          `Descripción: ${master.title} | ${brand.name}`,
+          `[TÍTULO] ${truncate(master.title, 60)}`,
+          `[DESCRIPCIÓN] ${master.keyMessage} ${master.cta}`,
         ].join("\n");
         return {
           network,
@@ -232,7 +225,7 @@ const handlers: Record<string, (input: unknown) => unknown> = {
           copy: truncate(copy, constraints.maxChars),
           cta: master.cta,
           hashtags: [...baseTags, "#Shorts"],
-          notes: "Guion para short vertical de 45-60 segundos con subtítulos.",
+          notes: "Short vertical de 45 a 60 segundos, primer plano con subtítulos grandes, cortes cada 3 segundos.",
         };
       }
     }

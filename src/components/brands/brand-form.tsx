@@ -9,7 +9,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { saveBrandAction } from "@/lib/actions/brands";
+import { LOCALES, LOCALE_LABELS } from "@/lib/locales";
 import { NETWORK_SPECS, NETWORKS } from "@/lib/networks";
 import type { Brand, BrandNetwork } from "@/lib/db/schema";
 
@@ -67,6 +69,16 @@ export function BrandForm({ brand }: { brand?: BrandWithNetworks }) {
             <Label htmlFor="voiceTone">Voz y tono</Label>
             <Textarea id="voiceTone" name="voiceTone" rows={3} defaultValue={brand?.voiceTone ?? ""} placeholder="Cómo habla la marca: registro, tuteo, ritmo, lo que evita…" />
           </div>
+          <div className="space-y-1.5 md:col-span-2">
+            <Label>Región del español</Label>
+            <Select name="locale" defaultValue={brand?.locale ?? "es-MX"}>
+              <SelectTrigger className="w-72"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {LOCALES.map((l) => <SelectItem key={l} value={l}>{LOCALE_LABELS[l]}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">Define el vocabulario y el registro que usan los agentes (por ejemplo, celular y negocio en México frente a móvil y pyme en España).</p>
+          </div>
         </CardContent>
       </Card>
 
@@ -78,7 +90,17 @@ export function BrandForm({ brand }: { brand?: BrandWithNetworks }) {
           <ListField name="offers" label="Ofertas" value={brand?.offers} />
           <ListField name="ctas" label="Llamados a la acción" value={brand?.ctas} />
           <ListField name="proofPoints" label="Pruebas y datos autorizados" hint="Los agentes solo pueden usar cifras que aparezcan aquí." value={brand?.proofPoints} />
-          <ListField name="approvedExamples" label="Ejemplos de contenido aprobado" value={brand?.approvedExamples} />
+          <div className="space-y-1.5">
+            <Label htmlFor="approvedExamples">Textos reales de la marca (referencia de voz)</Label>
+            <Textarea
+              id="approvedExamples"
+              name="approvedExamples"
+              rows={10}
+              defaultValue={brand?.approvedExamples.join("\n---\n") ?? ""}
+              placeholder={"Pega aquí 3 a 5 publicaciones tuyas que suenen como quieres sonar. Separa cada una con una línea que solo diga ---"}
+            />
+            <p className="text-xs text-muted-foreground">Es lo que más influye en que el contenido suene a ti. Cuantos más textos reales y completos, mejor. Separa cada texto con una línea que solo contenga tres guiones (---).</p>
+          </div>
         </CardContent>
       </Card>
 

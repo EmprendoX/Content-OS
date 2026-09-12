@@ -10,6 +10,7 @@ export function toBrandContext(brand: Brand): BrandContext {
     id: brand.id,
     name: brand.name,
     description: brand.description,
+    locale: brand.locale,
     products: brand.products,
     audiences: brand.audiences,
     voiceTone: brand.voiceTone,
