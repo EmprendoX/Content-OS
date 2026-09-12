@@ -15,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { fmtDateTime } from "@/components/shared/format";
 import { resetDemoAction, setGlobalDryRunAction, setLlmProviderAction, setPublishingEnabledAction, testLlmProviderAction } from "@/lib/actions/settings";
-import { AGENT_CATALOG } from "@/lib/agents/agents";
+import { AGENT_CATALOG } from "@/lib/agents/catalog";
 import { LLM_PROVIDER_OPTIONS } from "@/lib/llm";
 import type { LlmProviderName } from "@/lib/settings";
 import type { AuditEntry } from "@/lib/db/schema";

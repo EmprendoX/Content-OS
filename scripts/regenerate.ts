@@ -9,6 +9,7 @@ import { contentVariants } from "@/lib/db/schema";
 import { createLlmProvider } from "@/lib/llm";
 import { regenerateVariant } from "@/lib/agents/orchestrator";
 import { isNetwork, type Network } from "@/lib/networks";
+import { transitionVariant } from "@/lib/workflow/transitions";
 import type { LlmProviderName } from "@/lib/settings";
 import type { ReviewOutput } from "@/lib/agents/schemas";
 
@@ -31,6 +32,12 @@ async function main() {
   const provider = createLlmProvider((process.env.LLM_PROVIDER ?? "mock") as LlmProviderName);
   console.log(`Regenerando ${network} (v${variant.version}, ${variant.status}) con ${provider.name}/${provider.model}.`);
   console.log(`Feedback aplicado:\n${variant.reviewerComments}\n`);
+  // Igual que en la interfaz: una persona devuelve la variante a cambios antes de regenerar.
+  if (["READY_FOR_APPROVAL", "APPROVED", "SCHEDULED"].includes(variant.status)) {
+    transitionVariant(db, variant.id, "NEEDS_CHANGES", "human", "humano:cli", {
+      reviewerComments: variant.reviewerComments || "Regeneración solicitada por el revisor.",
+    });
+  }
   const started = Date.now();
   const result = await regenerateVariant(variant.id, { db, provider, actorLabel: "orquestador" });
   const review = result.review as ReviewOutput | null;

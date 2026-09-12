@@ -448,19 +448,4 @@ ${JSON.stringify(input.metrics, null, 2)}
 Qué necesito: summary (3-4 frases), topPerformers (máximo 3, con la razón basada en números), learnings (3-5), recommendations (3-5, accionables: qué publicar, en qué red, con qué formato), suggestedIdeas (2-4 títulos de trabajo con su justificación).`,
 };
 
-/** Lista completa para la interfaz y la documentación. El 12 (Publisher) es determinista. */
-export const AGENT_CATALOG = [
-  { name: "ResearchAgent", role: "Investiga el tema con la biblioteca de conocimiento." },
-  { name: "StrategyAgent", role: "Define objetivo, mensaje y plan por red." },
-  { name: "MasterContentAgent", role: "Escribe la pieza maestra." },
-  { name: "InstagramAdapter", role: "Adapta a Instagram." },
-  { name: "FacebookAdapter", role: "Adapta a Facebook." },
-  { name: "LinkedInAdapter", role: "Adapta a LinkedIn." },
-  { name: "XAdapter", role: "Adapta a X (hilos)." },
-  { name: "YouTubeAdapter", role: "Adapta a YouTube (guion)." },
-  { name: "VisualBriefAgent", role: "Brief visual por adaptación." },
-  { name: "ReviewAgent", role: "Revisión de calidad y cumplimiento." },
-  { name: "EditorChiefAgent", role: "Recomienda pasar a aprobación humana o pedir cambios." },
-  { name: "PublisherAgent", role: "Publica solo APPROVED/SCHEDULED. Sin IA." },
-  { name: "AnalyticsAgent", role: "Analiza resultados y sugiere ideas." },
-] as const;
+export { AGENT_CATALOG } from "./catalog";
