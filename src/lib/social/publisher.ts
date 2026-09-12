@@ -44,15 +44,24 @@ export function buildPayload(db: Db, variant: ContentVariant): PublishPayload {
   const asset = variant.visualAssetId
     ? db.select().from(mediaAssets).where(eq(mediaAssets.id, variant.visualAssetId)).get()
     : undefined;
-  const text = [variant.hook, "", variant.copy, "", variant.cta, variant.hashtags.join(" ")]
-    .filter((line, i, arr) => !(line === "" && arr[i - 1] === ""))
-    .join("\n")
-    .trim();
+  // El copy ya contiene el hook como primera línea y el CTA al final; solo se
+  // añade lo que falte para no duplicar texto.
+  const copy = variant.copy.trim();
+  const parts = [copy];
+  if (variant.hook.trim() && !copy.toLowerCase().startsWith(variant.hook.trim().toLowerCase().slice(0, 40))) {
+    parts.unshift(variant.hook.trim(), "");
+  }
+  if (variant.cta.trim() && !copy.toLowerCase().includes(variant.cta.trim().toLowerCase().slice(0, 30))) {
+    parts.push("", variant.cta.trim());
+  }
+  const tags = variant.hashtags.filter((h) => !copy.includes(h));
+  if (variant.network !== "x" && tags.length > 0) parts.push("", tags.join(" "));
+  const text = parts.join("\n").trim();
   return PublishPayloadSchema.parse({
     variantId: variant.id,
     network: variant.network,
     format: variant.format,
-    text: variant.network === "x" ? variant.copy : text,
+    text,
     hashtags: variant.hashtags,
     mediaPath: asset?.storedPath ?? null,
     scheduledAt: variant.scheduledAt ?? null,

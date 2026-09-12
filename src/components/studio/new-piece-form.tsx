@@ -77,6 +77,7 @@ export function NewPieceForm({ brands, networksByBrand, defaultBrandId }: { bran
           <label className="flex items-center gap-2 text-sm">
             <Checkbox name="run" defaultChecked /> Ejecutar el pipeline de agentes ahora
           </label>
+          <p className="text-xs text-muted-foreground">Con un proveedor real el pipeline tarda entre 2 y 5 minutos. No cierres la pestaña.</p>
           <DialogFooter>
             <Button type="submit" disabled={pending}>{pending ? "Creando…" : "Crear"}</Button>
           </DialogFooter>

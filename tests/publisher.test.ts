@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import type { Db } from "@/lib/db/client";
 import { auditLog, contentVariants, publishJobs } from "@/lib/db/schema";
 import { runPipeline } from "@/lib/agents/orchestrator";
-import { publishVariant, runDuePublications } from "@/lib/social/publisher";
+import { buildPayload, publishVariant, runDuePublications } from "@/lib/social/publisher";
 import { CONTENT_STATES, WorkflowError } from "@/lib/workflow/states";
 import { transitionVariant } from "@/lib/workflow/transitions";
 import { enablePublishing, makePiece, mockDeps, seedBrand, testDb } from "./helpers";
@@ -99,6 +99,29 @@ describe("PublisherAgent: bloqueo sin aprobación", () => {
     expect(outcome.job.error).toMatch(/archivo visual/);
     expect(outcome.job.attempts).toBe(1);
     expect(outcome.variant.status).toBe("FAILED");
+  });
+
+  it("el payload no duplica hook, CTA ni hashtags que ya están en el copy", async () => {
+    const variant = await readyVariant();
+    db.update(contentVariants)
+      .set({
+        hook: "Tu web pierde clientes en 5 segundos.",
+        copy: "Tu web pierde clientes en 5 segundos.\n\nHaz el test.\n\nPide tu auditoría gratuita.",
+        cta: "Pide tu auditoría gratuita",
+        hashtags: ["#auditoriaweb", "#pymes"],
+      })
+      .where(eq(contentVariants.id, variant.id))
+      .run();
+    const payload = buildPayload(db, db.select().from(contentVariants).where(eq(contentVariants.id, variant.id)).get()!);
+    expect(payload.text.match(/Tu web pierde clientes/g)).toHaveLength(1);
+    expect(payload.text.match(/Pide tu auditoría gratuita/g)).toHaveLength(1);
+    expect(payload.text.endsWith("#auditoriaweb #pymes")).toBe(true);
+
+    // Si el copy no incluye el hook ni el CTA, se añaden.
+    db.update(contentVariants).set({ copy: "Solo el cuerpo." }).where(eq(contentVariants.id, variant.id)).run();
+    const payload2 = buildPayload(db, db.select().from(contentVariants).where(eq(contentVariants.id, variant.id)).get()!);
+    expect(payload2.text.startsWith("Tu web pierde clientes")).toBe(true);
+    expect(payload2.text).toContain("Pide tu auditoría gratuita");
   });
 
   it("el planificador solo procesa SCHEDULED con fecha vencida", async () => {

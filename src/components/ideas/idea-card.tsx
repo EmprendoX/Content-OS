@@ -82,7 +82,7 @@ export function IdeaCard({ idea, brand, networks }: { idea: Idea; brand: Brand; 
         open={open}
         onOpenChange={setOpen}
         title="Generar contenido con agentes"
-        description="Se ejecutará el pipeline completo (investigación, estrategia, pieza maestra, adaptaciones, brief visual, revisión y editor jefe). El resultado quedará pendiente de tu aprobación."
+        description="Se ejecutará el pipeline completo (investigación, estrategia, pieza maestra, adaptaciones, brief visual, revisión y editor jefe). Con un proveedor real puede tardar entre 2 y 5 minutos; no cierres la pestaña. El resultado quedará pendiente de tu aprobación."
         confirmLabel="Generar"
         pending={pending}
         onConfirm={generate}

@@ -289,6 +289,8 @@ Rúbrica (100 puntos):
 - Adecuación a la red (20): estructura, longitud, ritmo y hashtags nativos de la red.
 - Voz de marca (10): suena a esta marca y no a cualquier otra.
 Un problema de severidad "alta" implica passed=false. Una frase genérica o un hook flojo es severidad "media". No apruebes por cortesía: el 60 % del contenido que recibes no debería pasar a la primera.
+Las pruebas autorizadas pueden parafrasearse: solo es problema si cambia la cifra o el sentido. No penalices la redacción de una prueba si el dato es el mismo.
+Reserva las severidades "media" para problemas que un lector notaría; los matices de estilo son "baja".
 Las sugerencias deben ser reescrituras concretas ("cambia X por Y"), no consejos vagos.`,
   prompt: (input) =>
     `${renderBrandBrief(input.brand)}
