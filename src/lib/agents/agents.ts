@@ -192,7 +192,7 @@ Lo que no podemos afirmar: ${input.research.risks.join(" | ")}
 ${feedbackBlock(input.feedback)}
 
 # Qué necesito
-- title: título de trabajo interno (no se publica).
+- title: título de trabajo interno (no se publica). Solo el título, sin prefijos como "Pieza maestra:".
 - hook: la primera frase del texto. Máximo 15 palabras. Debe abrir con algo concreto (una escena, una afirmación con opinión, un dato autorizado). Es también la primera línea de "body".
 - body: entre 300 y 500 palabras de texto corrido, en párrafos de 1 a 4 frases separados por una línea en blanco. Estructura libre pero con arco: empieza en una situación concreta, desarrolla las tres ideas hilándolas (sin numerarlas ni etiquetarlas), y cierra volviendo a la idea central con una frase que se quede. El llamado a la acción va integrado en las últimas líneas como una frase natural. Sin encabezados, sin negritas, sin listas.
 - keyMessage: la idea central tal como quedó dicha en el texto.
@@ -257,7 +257,8 @@ ${feedbackBlock(input.feedback)}
         network,
         hook: output.hook.trim() || firstLine(copy),
         hashtags: output.hashtags.map((h) => (h.startsWith("#") ? h : `#${h}`)).filter((h) => h.length > 1),
-        copy: network === "x" ? copy : copy.slice(0, input.constraints.maxChars),
+        // No se recorta aquí: si excede, el orquestador pide una corrección de longitud.
+        copy,
       };
     },
   };

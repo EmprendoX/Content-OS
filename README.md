@@ -126,6 +126,14 @@ Los scripts leen `.env.local` si lo cargas en la shell (`set -a; source .env.loc
 - Pipeline de 3 redes (13 llamadas): unos 9 minutos en serie con razonamiento por defecto; unos 2 minutos con adaptadores, briefs y revisiones en paralelo y `OPENAI_REASONING_EFFORT=low`.
 - Regenerar una adaptación con feedback: 45-60 segundos.
 
+**Cómo conseguir que suene a ti (lo que más influye, en orden)**
+
+1. **Textos reales de la marca.** En Marcas, pega 3 a 5 publicaciones tuyas completas (separadas por una línea `---`). Los agentes imitan su ritmo, vocabulario y forma de abrir y cerrar.
+2. **Región del español.** Cada marca tiene un dialecto (México por defecto) con guía de vocabulario; evita españolismos como "pymes", "autónomos" o "móvil".
+3. **Voz y tono.** Describe cómo habla la marca con ejemplos de lo que sí y lo que no.
+4. **Regla anti-IA.** Los prompts prohíben el formato telegráfico (etiquetas tipo "Error 1:", flechas, listas de fragmentos) y una lista de muletillas; el revisor detecta esas señales de forma determinista y bloquea la pieza.
+5. **Reintento de longitud.** Si una adaptación excede el límite de la red (por ejemplo, un post de X de más de 270 caracteres), el orquestador pide una corrección puntual antes de revisar.
+
 **Qué cambia respecto a la fase 1**
 
 - Prompts con brief de marca legible, reglas de estilo (sin frases genéricas, sin promesas, una idea por pieza) y un playbook por red (`src/lib/agents/prompts.ts`).

@@ -210,6 +210,35 @@ describe("calidad de contenido (fase 2)", () => {
     expect(master.system).toContain("suene a IA");
   });
 
+  it("si un post de X excede el límite, el orquestador pide una corrección de longitud antes de revisar", async () => {
+    const longPost = `2/ ${"palabra ".repeat(60)}`.trim(); // > 280 caracteres
+    let adaptCalls = 0;
+    const inner = new MockProvider();
+    const provider: LLMProvider = {
+      name: "spy",
+      model: "spy",
+      async generateObject<T>(request: GenerateObjectRequest<T>): Promise<T> {
+        const result = await inner.generateObject(request);
+        if (request.task !== "adapt") return result;
+        adaptCalls += 1;
+        const feedback = (request.input as { feedback?: { reviewerComments: string } }).feedback;
+        if (adaptCalls === 1) {
+          expect(feedback).toBeFalsy();
+          return { ...(result as object), copy: `1/ Hook corto.\n\n${longPost}\n\n3/ Cierre.` } as T;
+        }
+        expect(feedback?.reviewerComments).toMatch(/post 2 tiene/);
+        return result;
+      },
+    };
+    const xBrand = seedBrand(db, { networks: ["x"] });
+    const piece = makePiece(db, xBrand, ["x"]);
+    const result = await runPipeline(piece.id, { db, provider, actorLabel: "test" });
+    expect(adaptCalls).toBe(2);
+    const variant = db.select().from(contentVariants).where(eq(contentVariants.pieceId, piece.id)).get()!;
+    for (const post of variant.copy.split(/\n\s*\n/)) expect(post.length).toBeLessThanOrEqual(280);
+    expect(result.status).toBe("READY_FOR_APPROVAL");
+  });
+
   it("generateWithRetry reintenta una vez con los errores de validación y luego falla", async () => {
     const schema = z.object({ ok: z.boolean(), greeting: z.string() });
     const calls: string[] = [];

@@ -34,6 +34,7 @@ import {
   ResearchOutputSchema,
   ReviewOutputSchema,
   StrategyOutputSchema,
+  type AdapterInput,
   type AdapterOutput,
   type BrandContext,
   type AnalyticsInput,
@@ -199,6 +200,46 @@ export async function runPipeline(pieceId: string, deps: OrchestratorDeps): Prom
   }
 }
 
+/** Problemas de longitud que el adaptador debe corregir antes de la revisión. */
+function lengthProblems(network: Network, adaptation: AdapterOutput): string[] {
+  const spec = NETWORK_SPECS[network];
+  if (network === "x") {
+    return adaptation.copy
+      .split(/\n\s*\n/)
+      .map((post, i) => (post.length > spec.maxChars ? `El post ${i + 1} tiene ${post.length} caracteres y el máximo es ${spec.maxChars}: recórtalo sin perder la idea.` : ""))
+      .filter(Boolean);
+  }
+  return adaptation.copy.length > spec.maxChars
+    ? [`El copy tiene ${adaptation.copy.length} caracteres y el máximo es ${spec.maxChars}: recórtalo conservando la historia y el cierre.`]
+    : [];
+}
+
+/**
+ * Ejecuta un adaptador y, si incumple la longitud de la red, le pide una
+ * corrección puntual una sola vez. Así el revisor recibe piezas publicables.
+ */
+async function adaptWithLengthRetry(
+  deps: OrchestratorDeps,
+  network: Network,
+  input: Omit<AdapterInput, "feedback"> & { feedback?: AdapterInput["feedback"] },
+  refs: { pieceId?: string; variantId?: string },
+): Promise<AdapterOutput> {
+  const first = await step(deps, ADAPTERS[network], input, refs);
+  const problems = lengthProblems(network, first);
+  if (problems.length === 0) return first;
+  const previous = input.feedback?.reviewerComments ? `${input.feedback.reviewerComments}\n` : "";
+  const retry = await step(
+    deps,
+    ADAPTERS[network],
+    {
+      ...input,
+      feedback: { reviewerComments: `${previous}Corrige solo la longitud. ${problems.join(" ")}`, previousAttempt: first.copy },
+    },
+    refs,
+  );
+  return retry;
+}
+
 /** Desde NEEDS_CHANGES: vuelve a ADAPTING y regenera solo las adaptaciones. */
 async function regenerateAdaptations(
   piece: ContentPiece,
@@ -236,9 +277,9 @@ async function adaptReviewDecide(
         priority: 2,
       };
       const spec = NETWORK_SPECS[network];
-      const adaptation = await step(
+      const adaptation = await adaptWithLengthRetry(
         deps,
-        ADAPTERS[network],
+        network,
         {
           brand,
           network,
@@ -393,9 +434,9 @@ export async function regenerateVariant(variantId: string, deps: OrchestratorDep
   const feedback = variant.reviewerComments.trim()
     ? { reviewerComments: variant.reviewerComments, previousAttempt: variant.copy }
     : null;
-  const adaptation = await step(
+  const adaptation = await adaptWithLengthRetry(
     deps,
-    ADAPTERS[variant.network],
+    variant.network,
     {
       brand,
       network: variant.network,
