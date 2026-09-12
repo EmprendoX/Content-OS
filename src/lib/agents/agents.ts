@@ -76,9 +76,9 @@ function feedbackBlock(feedback: MasterInput["feedback"]): string {
     "# Feedback del revisor humano (PRIORIDAD MÁXIMA)",
     `El revisor pidió cambios: «${feedback.reviewerComments.trim()}»`,
     feedback.previousAttempt
-      ? `Intento anterior (NO lo repitas; cambia de verdad lo que se pide):\n"""\n${feedback.previousAttempt}\n"""`
+      ? `Intento anterior (es tu BASE: parte de este texto):\n"""\n${feedback.previousAttempt}\n"""`
       : "",
-    "Aplica el feedback de forma visible y explica en \"notes\" qué cambiaste.",
+    "Instrucciones: aplica exactamente los cambios pedidos sobre el intento anterior y conserva literalmente todo lo que no se mencione. No reescribas desde la pieza maestra, no cambies el hook si no te lo piden y no reintroduzcas jerga ni frases que ya se habían corregido. Explica en \"notes\" qué cambiaste.",
   ]
     .filter(Boolean)
     .join("\n");
@@ -224,12 +224,18 @@ ${feedbackBlock(input.feedback)}
 - cta: la llamada a la acción tal como aparece al final del copy.
 - hashtags: lista con "#", dentro del rango permitido, específicos del tema.
 - notes: indicaciones de producción (slides, plano, texto en pantalla, enlace en comentario) y, si hubo feedback, qué cambiaste.`,
-    postProcess: (input, output) => ({
-      ...output,
-      network,
-      hashtags: output.hashtags.map((h) => (h.startsWith("#") ? h : `#${h}`)).filter((h) => h.length > 1),
-      copy: network === "x" ? output.copy : output.copy.slice(0, input.constraints.maxChars),
-    }),
+    postProcess: (input, output) => {
+      // Si el modelo repite el primer párrafo (hook duplicado), se conserva una sola vez.
+      const paragraphs = output.copy.trim().split(/\n\s*\n/);
+      if (paragraphs.length > 1 && paragraphs[0].trim() === paragraphs[1].trim()) paragraphs.splice(1, 1);
+      const copy = paragraphs.join("\n\n");
+      return {
+        ...output,
+        network,
+        hashtags: output.hashtags.map((h) => (h.startsWith("#") ? h : `#${h}`)).filter((h) => h.length > 1),
+        copy: network === "x" ? copy : copy.slice(0, input.constraints.maxChars),
+      };
+    },
   };
 }
 
@@ -388,8 +394,9 @@ export const EditorChiefAgent: AgentDefinition<EditorChiefInput, EditorChiefOutp
   task: "editor_chief",
   inputSchema: EditorChiefInputSchema,
   outputSchema: EditorChiefOutputSchema,
-  system: `Eres el editor jefe. Recibes las adaptaciones de una pieza con su revisión y decides, por variante y en conjunto, si pasan a aprobación humana (READY_FOR_APPROVAL) o vuelven a cambios (NEEDS_CHANGES). No tienes autoridad para aprobar: la aprobación final es siempre de una persona.
-Tus comentarios por variante son la guía que recibirá el redactor si se regenera: sé concreto (qué frase, qué cambio). Si una variante pasa, di en una frase por qué funciona.`,
+  system: `Eres el editor jefe. Recibes las adaptaciones de una pieza con su revisión y redactas la decisión editorial. No tienes autoridad para aprobar: la aprobación final es siempre de una persona.
+Regla de decisión: tu decisión por variante debe coincidir con la revisión. Si la revisión pasó, la variante va a READY_FOR_APPROVAL y tus comentarios son sugerencias opcionales para la persona que aprueba (máximo 3, las más valiosas). Si no pasó, va a NEEDS_CHANGES y tus comentarios son la lista exacta de cambios que aplicará el redactor: frase original → frase nueva.
+Sé concreto y breve. Si una variante pasa, di en una frase por qué funciona antes de las sugerencias.`,
   prompt: (input) =>
     `Marca: ${input.brand.name}. Tema: "${input.topic}".
 
@@ -406,13 +413,13 @@ Sugerencias: ${v.review.suggestions.join(" | ") || "ninguna"}`,
 
 Decide por variante (usa exactamente los variantId de arriba) y en conjunto.`,
   postProcess: (input, output) => {
-    // Garantía determinista: una variante con revisión fallida nunca pasa.
+    // Garantía determinista: la decisión sigue a la revisión. Una variante con
+    // revisión fallida nunca pasa y una que pasó no se bloquea por matices.
     const perVariant = input.variants.map((v) => {
       const decision = output.perVariant.find((d) => d.variantId === v.variantId);
-      const forced = !v.review.passed ? ("NEEDS_CHANGES" as const) : decision?.decision ?? "NEEDS_CHANGES";
       return {
         variantId: v.variantId,
-        decision: forced,
+        decision: v.review.passed ? ("READY_FOR_APPROVAL" as const) : ("NEEDS_CHANGES" as const),
         comments: decision?.comments ?? (v.review.passed ? "" : v.review.issues.map((i) => i.message).join(" ")),
       };
     });

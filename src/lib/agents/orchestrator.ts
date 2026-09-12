@@ -389,8 +389,9 @@ export async function regenerateVariant(variantId: string, deps: OrchestratorDep
   }
   if (variant.status !== "ADAPTING") transitionVariant(db, variantId, "ADAPTING", "agent", actorLabel);
   // Los comentarios del revisor y el intento anterior viajan al adaptador como feedback.
+  // El copy ya empieza por el hook (convención del contrato): no se concatena.
   const feedback = variant.reviewerComments.trim()
-    ? { reviewerComments: variant.reviewerComments, previousAttempt: `${variant.hook}\n\n${variant.copy}` }
+    ? { reviewerComments: variant.reviewerComments, previousAttempt: variant.copy }
     : null;
   const adaptation = await step(
     deps,

@@ -110,6 +110,22 @@ Objetivo de la fase: producir buen contenido con Anthropic u OpenAI. Las redes s
 3. En **Configuración → Proveedor de IA** elige el proveedor, pulsa **Probar conexión** y después **Guardar proveedor**.
 4. Genera contenido desde **Ideas** o **Estudio**. En la pestaña **Agentes** de cada pieza puedes ver la entrada y la salida JSON de cada agente para depurar la calidad.
 
+**Comandos de línea para trabajar con el proveedor**
+
+| Comando | Qué hace |
+| --- | --- |
+| `npm run llm:ping` | Llamada mínima al proveedor del entorno: confirma clave, modelo y latencia |
+| `npm run llm:set -- openai [modelo]` | Fija el proveedor activo de la app (equivale a Guardar proveedor en Configuración) |
+| `npm run generate -- --brand "RexSite" --topic "Tema" --networks linkedin,instagram,x` | Crea una pieza, ejecuta el pipeline e imprime pieza maestra, adaptaciones y revisiones |
+| `npm run regenerate -- --piece <id> --network x` | Regenera una adaptación aplicando los comentarios del revisor |
+
+Los scripts leen `.env.local` si lo cargas en la shell (`set -a; source .env.local; set +a`).
+
+**Rendimiento medido con `gpt-5`**
+
+- Pipeline de 3 redes (13 llamadas): unos 9 minutos en serie con razonamiento por defecto; unos 2 minutos con adaptadores, briefs y revisiones en paralelo y `OPENAI_REASONING_EFFORT=low`.
+- Regenerar una adaptación con feedback: 45-60 segundos.
+
 **Qué cambia respecto a la fase 1**
 
 - Prompts con brief de marca legible, reglas de estilo (sin frases genéricas, sin promesas, una idea por pieza) y un playbook por red (`src/lib/agents/prompts.ts`).
