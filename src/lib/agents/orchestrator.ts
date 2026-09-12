@@ -225,53 +225,56 @@ async function adaptReviewDecide(
   const master = MasterOutputSchema.parse(piece.master);
   const strategy = StrategyOutputSchema.parse(piece.strategy);
 
-  // 4. Adaptaciones + brief visual
-  const variantIds: string[] = [];
-  for (const network of piece.networks) {
-    const plan = strategy.networkPlan.find((p) => p.network === network) ?? {
-      network,
-      format: NETWORK_SPECS[network].defaultFormat,
-      objective: strategy.objective,
-      priority: 2,
-    };
-    const spec = NETWORK_SPECS[network];
-    const adaptation = await step(
-      deps,
-      ADAPTERS[network],
-      {
-        brand,
+  // 4. Adaptaciones + brief visual: las redes son independientes, se generan en paralelo.
+  // better-sqlite3 es síncrono, así que las escrituras no se solapan.
+  const variantIds = await Promise.all(
+    piece.networks.map(async (network) => {
+      const plan = strategy.networkPlan.find((p) => p.network === network) ?? {
         network,
-        plan,
-        master,
-        constraints: { maxChars: spec.maxChars, formats: spec.formats, hashtagRange: spec.hashtagRange, tone: spec.tone },
-      },
-      { pieceId },
-    );
-    const visualBrief = await step(
-      deps,
-      VisualBriefAgent,
-      { brand, adaptation, aspectRatios: spec.aspectRatios },
-      { pieceId },
-    );
-    variantIds.push(upsertVariant(db, piece, adaptation, visualBrief, actorLabel));
-  }
+        format: NETWORK_SPECS[network].defaultFormat,
+        objective: strategy.objective,
+        priority: 2,
+      };
+      const spec = NETWORK_SPECS[network];
+      const adaptation = await step(
+        deps,
+        ADAPTERS[network],
+        {
+          brand,
+          network,
+          plan,
+          master,
+          constraints: { maxChars: spec.maxChars, formats: spec.formats, hashtagRange: spec.hashtagRange, tone: spec.tone },
+        },
+        { pieceId },
+      );
+      const visualBrief = await step(
+        deps,
+        VisualBriefAgent,
+        { brand, adaptation, aspectRatios: spec.aspectRatios },
+        { pieceId },
+      );
+      return upsertVariant(db, piece, adaptation, visualBrief, actorLabel);
+    }),
+  );
 
-  // 5. Revisión
+  // 5. Revisión (también en paralelo)
   transitionPiece(db, pieceId, "IN_REVIEW", "agent", actorLabel);
-  const reviewed: { variantId: string; network: Network; adaptation: AdapterOutput; review: ReviewOutput }[] = [];
-  for (const variantId of variantIds) {
-    const variant = db.select().from(contentVariants).where(eq(contentVariants.id, variantId)).get()!;
-    if (variant.status !== "IN_REVIEW") transitionVariant(db, variantId, "IN_REVIEW", "agent", actorLabel);
-    const adaptation = variantToAdaptation(variant);
-    const review = await step(
-      deps,
-      ReviewAgent,
-      { brand, adaptation, maxChars: NETWORK_SPECS[variant.network].maxChars },
-      { pieceId, variantId },
-    );
-    db.update(contentVariants).set({ review, updatedAt: nowIso() }).where(eq(contentVariants.id, variantId)).run();
-    reviewed.push({ variantId, network: variant.network, adaptation, review });
-  }
+  const reviewed: { variantId: string; network: Network; adaptation: AdapterOutput; review: ReviewOutput }[] = await Promise.all(
+    variantIds.map(async (variantId) => {
+      const variant = db.select().from(contentVariants).where(eq(contentVariants.id, variantId)).get()!;
+      if (variant.status !== "IN_REVIEW") transitionVariant(db, variantId, "IN_REVIEW", "agent", actorLabel);
+      const adaptation = variantToAdaptation(variant);
+      const review = await step(
+        deps,
+        ReviewAgent,
+        { brand, adaptation, maxChars: NETWORK_SPECS[variant.network].maxChars },
+        { pieceId, variantId },
+      );
+      db.update(contentVariants).set({ review, updatedAt: nowIso() }).where(eq(contentVariants.id, variantId)).run();
+      return { variantId, network: variant.network, adaptation, review };
+    }),
+  );
 
   // 6. Editor jefe: recomienda READY_FOR_APPROVAL o NEEDS_CHANGES. Nunca APPROVED.
   const decision = await step(deps, EditorChiefAgent, { brand, topic: piece.topic, variants: reviewed }, { pieceId });
