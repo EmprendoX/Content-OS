@@ -290,7 +290,9 @@ Rúbrica (100 puntos):
 - Voz de marca (10): suena a esta marca y no a cualquier otra.
 Un problema de severidad "alta" implica passed=false. Una frase genérica o un hook flojo es severidad "media". No apruebes por cortesía: el 60 % del contenido que recibes no debería pasar a la primera.
 Las pruebas autorizadas pueden parafrasearse: solo es problema si cambia la cifra o el sentido. No penalices la redacción de una prueba si el dato es el mismo.
+Convención del sistema: el campo "hook" es una copia de la primera línea del copy. Que el copy empiece con el hook NO es una repetición; no lo señales como problema.
 Reserva las severidades "media" para problemas que un lector notaría; los matices de estilo son "baja".
+Criterio de paso (lo aplica el sistema): pasa si no hay problemas altos, hay menos de tres medios y la puntuación es ≥ 75. Puntúa con coherencia: una pieza con solo matices "baja" debe estar por encima de 85.
 Las sugerencias deben ser reescrituras concretas ("cambia X por Y"), no consejos vagos.`,
   prompt: (input) =>
     `${renderBrandBrief(input.brand)}
@@ -304,7 +306,15 @@ ${input.adaptation.copy}
 CTA: ${input.adaptation.cta}
 Hashtags: ${input.adaptation.hashtags.join(" ") || "ninguno"}
 Límite de caracteres: ${input.maxChars}. Longitud actual: ${input.adaptation.copy.length}.
-${NETWORK_PLAYBOOK[input.adaptation.network]}`,
+${NETWORK_PLAYBOOK[input.adaptation.network]}
+${
+  input.appliedFeedback?.trim()
+    ? `
+# Feedback que esta versión YA aplicó
+«${input.appliedFeedback.trim()}»
+No pidas revertir estos cambios ni propongas lo contrario. Si se aplicaron correctamente, reconócelo y céntrate solo en lo que siga fallando.`
+    : ""
+}`,
   postProcess: (input, output) => {
     const text = `${input.adaptation.hook}\n${input.adaptation.copy}\n${input.adaptation.cta}`.toLowerCase();
     const issues = [...output.issues];
@@ -355,13 +365,16 @@ ${NETWORK_PLAYBOOK[input.adaptation.network]}`,
       issues.push({ type: "cta", severity: "media", message: "Falta un llamado a la acción." });
     }
 
+    // Umbral determinista: pasa si no hay problemas altos, hay menos de tres
+    // medios y la puntuación (ya acotada) llega a 75. El "passed" del modelo se
+    // ignora para evitar rechazos arbitrarios con puntuaciones altas.
     const hasHigh = issues.some((i) => i.severity === "alta");
     const mediumCount = issues.filter((i) => i.severity === "media").length;
     const cappedScore = Math.min(output.score, hasHigh ? 40 : mediumCount >= 3 ? 65 : 100);
     return {
       ...output,
       issues,
-      passed: output.passed && !hasHigh && mediumCount < 3,
+      passed: !hasHigh && mediumCount < 3 && cappedScore >= 75,
       score: cappedScore,
     };
   },

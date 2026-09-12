@@ -95,10 +95,10 @@ export const NETWORK_PLAYBOOK: Record<Network, string> = {
   youtube: `# Playbook YouTube
 - Short (45-60 s vertical): guion con GANCHO (0-3 s, una frase que plantea el problema o promete algo concreto), DESARROLLO (3 bloques de 10-15 s, una idea cada uno, con ejemplo), CIERRE (CTA en una frase).
 - Video largo: título (≤ 60 caracteres, con beneficio claro), estructura por secciones con minutos estimados, gancho de los primeros 30 s, descripción de 3-5 líneas.
-- En "copy" entrega el guion completo con etiquetas [GANCHO], [BLOQUE 1], [BLOQUE 2], [BLOQUE 3], [CIERRE], y al final [TÍTULO] y [DESCRIPCIÓN].
+- En "copy" entrega el guion completo con etiquetas [GANCHO], [BLOQUE 1], [BLOQUE 2], [BLOQUE 3], [CIERRE]. OBLIGATORIO: termina el copy con [TÍTULO] (≤ 60 caracteres) y [DESCRIPCIÓN] (3-5 líneas). Sin estas dos secciones la pieza se rechaza.
 - Habla en segunda persona, ritmo rápido, frases de máximo 12 palabras para que se lean como subtítulos.
 - Hashtags: 2 a 5 para la descripción.
-- En "notes": indicaciones de rodaje (plano, texto en pantalla, b-roll).`,
+- "notes" es OBLIGATORIO y no puede quedar vacío: plano, texto en pantalla por bloque, b-roll y ritmo de cortes.`,
 };
 
 export function renderNetworkConstraints(network: Network): string {

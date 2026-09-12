@@ -134,6 +134,32 @@ describe("calidad de contenido (fase 2)", () => {
     expect(review.score).toBeLessThanOrEqual(40);
   });
 
+  it("el umbral de paso es determinista: sin altos, menos de tres medios y puntuación ≥ 75", async () => {
+    const brand = {
+      id: brandId, name: "Marca Test", description: "", products: [], audiences: [], voiceTone: "", offers: [], ctas: [],
+      proofPoints: [], preferredWords: [], forbiddenWords: [], forbiddenPromises: [], approvedExamples: [],
+    };
+    const clean = await runAgent(ReviewAgent, new MockProvider(), {
+      brand,
+      maxChars: 3000,
+      adaptation: { network: "linkedin", format: "publicación", hook: "Tu web pierde clientes en cinco segundos.", copy: "Texto concreto.", cta: "Escríbenos", hashtags: ["#a", "#b"], notes: "" },
+    });
+    expect(clean.passed).toBe(true);
+    expect(clean.score).toBeGreaterThanOrEqual(75);
+  });
+
+  it("al volver a revisar tras regenerar, el revisor recibe el feedback ya aplicado", async () => {
+    const piece = makePiece(db, brandId, ["linkedin"]);
+    await runPipeline(piece.id, mockDeps(db));
+    const variant = db.select().from(contentVariants).where(eq(contentVariants.pieceId, piece.id)).get()!;
+    transitionVariant(db, variant.id, "NEEDS_CHANGES", "human", "test", { reviewerComments: "Cambia el hook por uno con dato." });
+    const spy = new SpyProvider();
+    await regenerateVariant(variant.id, { db, provider: spy, actorLabel: "test" });
+    const review = spy.requests.find((r) => r.task === "review")!;
+    expect((review.input as { appliedFeedback: string }).appliedFeedback).toBe("Cambia el hook por uno con dato.");
+    expect(review.prompt).toContain("YA aplicó");
+  });
+
   it("generateWithRetry reintenta una vez con los errores de validación y luego falla", async () => {
     const schema = z.object({ ok: z.boolean(), greeting: z.string() });
     const calls: string[] = [];

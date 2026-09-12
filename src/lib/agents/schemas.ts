@@ -185,6 +185,8 @@ export const ReviewInputSchema = z.object({
   brand: BrandContextSchema,
   adaptation: AdapterOutputSchema,
   maxChars: z.number().int(),
+  /** Feedback humano/editorial que esta versión ya aplicó (para no contradecirlo). */
+  appliedFeedback: z.string().nullable().optional(),
 });
 export type ReviewInput = z.infer<typeof ReviewInputSchema>;
 

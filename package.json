@@ -17,7 +17,8 @@
     "setup": "npm run db:migrate && npm run db:seed",
     "llm:ping": "tsx scripts/ping-llm.ts",
     "generate": "tsx scripts/generate.ts",
-    "llm:set": "tsx scripts/set-provider.ts"
+    "llm:set": "tsx scripts/set-provider.ts",
+    "regenerate": "tsx scripts/regenerate.ts"
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3",

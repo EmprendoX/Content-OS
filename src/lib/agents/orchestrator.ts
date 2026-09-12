@@ -424,7 +424,13 @@ export async function reviewVariant(variantId: string, deps: OrchestratorDeps): 
   const review = await step(
     deps,
     ReviewAgent,
-    { brand, adaptation, maxChars: NETWORK_SPECS[variant.network].maxChars },
+    {
+      brand,
+      adaptation,
+      maxChars: NETWORK_SPECS[variant.network].maxChars,
+      // Esta versión ya aplicó los comentarios previos: el revisor no debe contradecirlos.
+      appliedFeedback: variant.reviewerComments.trim() || null,
+    },
     { pieceId: piece.id, variantId },
   );
   const decision = await step(
